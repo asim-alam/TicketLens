@@ -21,3 +21,5 @@ venv/
 # --- misc ---
 *.log
 .DS_Store
+
+.vercel
