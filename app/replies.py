@@ -34,6 +34,7 @@ class ReplyContext:
     established_recipient: bool
     ambiguous: bool
     lang: str  # "en" | "bn"
+    contested_refund: bool = False
 
 
 def _amt(amount: Optional[float]) -> str:
@@ -85,6 +86,9 @@ def _summary(c: ReplyContext) -> str:
         return (f"Merchant reports settlement {rid} ({amt}, status "
                 f"{c.status or 'pending'}) is delayed beyond the expected window.")
     if ct == CaseType.refund_request:
+        if c.contested_refund:
+            return (f"Customer requests refund review for {rid} ({amt}) due to a "
+                    f"reported merchant delivery or service failure.")
         return (f"Customer requests a refund of {amt} for {rid}; appears to be a "
                 f"change-of-mind request rather than a service failure.")
     if ct == CaseType.phishing_or_social_engineering:
@@ -122,6 +126,9 @@ def _action(c: ReplyContext) -> str:
         return (f"Route to merchant operations to verify the settlement batch status "
                 f"for {rid} and communicate a revised ETA if it is delayed.")
     if ct == CaseType.refund_request:
+        if c.contested_refund:
+            return ("Flag for human review; collect merchant/order context and assess "
+                    "the disputed delivery or service claim per policy.")
         return ("Inform the customer that refund eligibility depends on the merchant's "
                 "policy and guide them through the standard refund process.")
     if ct == CaseType.phishing_or_social_engineering:

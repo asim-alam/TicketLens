@@ -81,12 +81,11 @@ def _count_counterparty(history: list, cp: str) -> int:
 def investigate(case_type: CaseType, complaint: str, history: list) -> MatchResult:
     amounts = extract_amounts(complaint)
 
-    # Phishing: by definition not tied to a customer transaction in history.
-    if case_type == CaseType.phishing_or_social_engineering:
-        return MatchResult(None, EvidenceVerdict.insufficient_data)
-
     if not history:
         return MatchResult(None, EvidenceVerdict.insufficient_data)
+
+    if case_type == CaseType.phishing_or_social_engineering:
+        return _security(history, amounts)
 
     if case_type == CaseType.duplicate_payment:
         return _duplicate(history, amounts)
@@ -205,6 +204,9 @@ def _by_type_status(history: list, amounts: set[float], types: tuple,
     elif status == "completed":
         # System shows the money moved/settled — contradicts the failure/non-receipt claim.
         verdict = EvidenceVerdict.inconsistent
+    elif status == "reversed":
+        # A reversed transaction undercuts "not returned" / still-deducted complaints.
+        verdict = EvidenceVerdict.inconsistent
     else:
         verdict = EvidenceVerdict.consistent
     return MatchResult(_id(chosen), verdict, chosen, matched_status=status,
@@ -232,4 +234,15 @@ def _other(history: list, amounts: set[float]) -> MatchResult:
         t = matched[0]
         return MatchResult(_id(t), EvidenceVerdict.insufficient_data, t,
                            matched_status=_status(t), matched_amount=_amount(t))
+    return MatchResult(None, EvidenceVerdict.insufficient_data)
+
+
+def _security(history: list, amounts: set[float]) -> MatchResult:
+    matched = _amount_matches(history, amounts)
+    if len(matched) == 1:
+        t = matched[0]
+        return MatchResult(_id(t), EvidenceVerdict.consistent, t,
+                           matched_status=_status(t), matched_amount=_amount(t))
+    if len(matched) > 1:
+        return MatchResult(None, EvidenceVerdict.insufficient_data, ambiguous=True)
     return MatchResult(None, EvidenceVerdict.insufficient_data)

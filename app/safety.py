@@ -46,6 +46,13 @@ _SHARED_SECRET_SIGNALS = [
     "ওটিপি দিয়ে দিয়েছি", "পিন দিয়ে দিয়েছি", "শেয়ার করে ফেলেছি",
 ]
 
+_PROMPT_INJECTION_SIGNALS = [
+    "ignore previous instructions", "ignore all previous instructions",
+    "system:", "developer:", "assistant:", "reply with", "tell the customer",
+    "ask me to", "ask the customer", "you must", "previous instructions",
+    "override", "jailbreak",
+]
+
 
 def _norm(text: str) -> str:
     return (text or "").lower()
@@ -57,6 +64,7 @@ def detect_safety_flags(text: str) -> dict:
         "fraud_signal": any(s in t for s in _FRAUD_SIGNALS),
         "money_loss": any(s in t for s in _MONEY_LOSS_SIGNALS),
         "user_shared_secret": any(s in t for s in _SHARED_SECRET_SIGNALS),
+        "prompt_injection": any(s in t for s in _PROMPT_INJECTION_SIGNALS),
     }
 
 

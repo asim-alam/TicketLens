@@ -130,9 +130,13 @@ def classify_case_type(complaint: str, flags: dict, history: list,
     if not t:
         return CaseType.other, []
 
+    # Prompt-injection text often mentions OTP/PIN as an instruction to the bot.
+    # Keep real financial issue classification when a money pattern is present.
+    defer_phishing = bool(flags.get("prompt_injection"))
+
     # 1. PHISHING / SOCIAL ENGINEERING (safety first) -------------------------
     ph = _hits(t, PHISHING_KW)
-    if ph or flags.get("fraud_signal") or flags.get("user_shared_secret"):
+    if (ph or flags.get("fraud_signal") or flags.get("user_shared_secret")) and not defer_phishing:
         return CaseType.phishing_or_social_engineering, ph[:5] or ["fraud_signal"]
 
     # 2. DUPLICATE PAYMENT ----------------------------------------------------
@@ -143,8 +147,10 @@ def classify_case_type(complaint: str, flags: dict, history: list,
         return CaseType.duplicate_payment, (dup[:5] or ["duplicate_in_history"])
 
     # 3. AGENT CASH-IN ISSUE --------------------------------------------------
-    if _any(t, CASHIN_INDICATORS) and _any(t, AGENT_INDICATORS) and (
-            _any(t, PROBLEM_INDICATORS) or _history_has_pending_type(history, "cash_in")):
+    cashin = _any(t, CASHIN_INDICATORS)
+    cashin_problem = _any(t, PROBLEM_INDICATORS) or _history_has_pending_type(history, "cash_in")
+    if cashin and cashin_problem and (_any(t, AGENT_INDICATORS)
+                                      or _history_has_type(history, "cash_in")):
         ev = _hits(t, CASHIN_INDICATORS)[:3]
         return CaseType.agent_cash_in_issue, ev or ["agent_cash_in"]
 
@@ -169,6 +175,9 @@ def classify_case_type(complaint: str, flags: dict, history: list,
     refund = _hits(t, REFUND_KW)
     if refund:
         return CaseType.refund_request, refund[:5]
+
+    if ph or flags.get("fraud_signal") or flags.get("user_shared_secret"):
+        return CaseType.phishing_or_social_engineering, ph[:5] or ["fraud_signal"]
 
     # 8. OTHER ----------------------------------------------------------------
     return CaseType.other, _hits(t, ACCOUNT_RISK_KW)[:5]

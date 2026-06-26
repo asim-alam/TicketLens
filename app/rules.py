@@ -111,7 +111,7 @@ def _confidence(case_type: CaseType, match: MatchResult) -> float:
 
 
 def _reason_codes(case_type: CaseType, match: MatchResult, severity: Severity,
-                  complaint: str) -> list[str]:
+                  complaint: str, flags: dict) -> list[str]:
     codes: list[str] = [case_type.value if case_type != CaseType.phishing_or_social_engineering
                         else "phishing"]
     v = match.verdict
@@ -135,6 +135,9 @@ def _reason_codes(case_type: CaseType, match: MatchResult, severity: Severity,
     elif case_type == CaseType.agent_cash_in_issue and (match.matched_status == "pending"):
         codes.append("pending_transaction")
 
+    if flags.get("prompt_injection"):
+        codes.append("prompt_injection")
+
     if severity == Severity.critical:
         codes.append("critical_escalation")
     # De-dup, keep order, cap at 4.
@@ -149,10 +152,16 @@ def _reason_codes(case_type: CaseType, match: MatchResult, severity: Severity,
 def _apply_escalation(case_type: CaseType, severity: Severity, match: MatchResult,
                       complaint: str, flags: dict) -> bool:
     """SINGLE source of truth for human_review_required (validated on all 10 samples)."""
+    contested_refund = (case_type == CaseType.refund_request
+                        and any(k in normalize(complaint) for k in CONTESTED_REFUND_KW))
     if case_type in (CaseType.phishing_or_social_engineering,
                      CaseType.duplicate_payment, CaseType.agent_cash_in_issue):
         return True
     if case_type == CaseType.wrong_transfer and match.relevant_id is not None:
+        return True
+    if contested_refund:
+        return True
+    if match.ambiguous:
         return True
     if severity == Severity.critical:
         return True
@@ -160,7 +169,7 @@ def _apply_escalation(case_type: CaseType, severity: Severity, match: MatchResul
         return True
     if _effective_amount(complaint, match) >= 50000:
         return True
-    if flags.get("user_shared_secret") or flags.get("money_loss"):
+    if flags.get("user_shared_secret") or flags.get("money_loss") or flags.get("prompt_injection"):
         return True
     return False
 
@@ -180,7 +189,7 @@ def decide(complaint: str, language: str | None, channel: str | None,
     department = _department(case_type, complaint)
     confidence = _confidence(case_type, match)
     human_review = _apply_escalation(case_type, severity, match, complaint, flags)
-    reason_codes = _reason_codes(case_type, match, severity, complaint)
+    reason_codes = _reason_codes(case_type, match, severity, complaint, flags)
 
     lang = reply_language(language, complaint)
     ctx = ReplyContext(
@@ -192,6 +201,8 @@ def decide(complaint: str, language: str | None, channel: str | None,
         status=match.matched_status,
         established_recipient=match.established_recipient,
         ambiguous=match.ambiguous,
+        contested_refund=(case_type == CaseType.refund_request
+                          and any(k in normalize(complaint) for k in CONTESTED_REFUND_KW)),
         lang=lang,
     )
     summary, action, reply = build_texts(ctx)
