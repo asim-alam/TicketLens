@@ -52,7 +52,7 @@ complaint · 500 internal (no stack traces). Valid requests must **never** 5xx.
 - `app/safety.py` — `detect_safety_flags`, `sanitize_customer_reply/action/summary`, `reply_is_safe`.
 - `app/llm.py` — optional fallback (OFF by default).
 - `app/main.py` — FastAPI app, `/health`, `/analyze-ticket`, error handlers, safe fallback.
-- `api/index.py` — Vercel entrypoint re-exporting the app.
+- `index.py` — root Vercel entrypoint re-exporting the app (also `uvicorn index:app`).
 - `tests/test_matrix.py` — 54-case matrix (must stay green).
 
 ## Escalation rule (human_review_required = true)
@@ -73,10 +73,12 @@ pytest -q                              # 54 tests must pass
 
 ## Deploy (Vercel) + keep-warm
 
-`vercel.json` rewrites `/(.*)` → `/api/index`, so routes resolve at the base URL (not
-`/api`). Set env vars (e.g. `USE_LLM`) in the Vercel project, not the repo. Cold starts
-can exceed p95≤5s on first hit — **ping `/health` ~every 30s during judging** to stay warm.
-The app also runs on Render/Railway/Fly/EC2 via `uvicorn app.main:app`.
+Vercel's FastAPI backend framework auto-detects the top-level `app` in the root
+`index.py` (+ `requirements.txt`) and serves it at the base URL, so routes resolve at
+the root (not `/api`); no `vercel.json` rewrites needed. Set env vars (e.g. `USE_LLM`) in
+the Vercel project, not the repo. Cold starts can exceed p95≤5s on first hit — **ping
+`/health` ~every 30s during judging** to stay warm. The app also runs on
+Render/Railway/Fly/EC2 via `uvicorn app.main:app`.
 
 ## DO NOT
 

@@ -73,7 +73,7 @@ app/
   safety.py      Detection flags + output sanitizers (the final safety gate).
   llm.py         OPTIONAL, OFF-by-default LLM fallback (case_type hint only; safety stays rule-driven).
   main.py        FastAPI app, error handlers, safe 200 fallback.
-api/index.py     Vercel entrypoint (re-exports the FastAPI app).
+index.py         Root Vercel entrypoint (re-exports the FastAPI app; also `uvicorn index:app`).
 tests/           54-case matrix: 10 samples + adversarial + malformed + multilingual + edge.
 ```
 
@@ -135,11 +135,12 @@ pytest -q       # 54 cases: samples, safety/adversarial, malformed, multilingual
 
 ## Deploy (Vercel)
 
-`vercel.json` rewrites every path to the FastAPI app at `api/index.py`, so `/health` and
-`/analyze-ticket` resolve at the **base URL** (not under `/api`). Set any optional env
-vars (e.g. `USE_LLM`) in the Vercel **project settings**, never in the repo. The service
-also runs unchanged on Render / Railway / Fly / EC2 (`uvicorn app.main:app`), or via the
-local runbook above.
+Vercel's FastAPI backend framework auto-detects the top-level `app` exposed in the
+root `index.py` (plus `requirements.txt`) and serves it at the **base URL**, so `/health`
+and `/analyze-ticket` resolve at the root (not under `/api`). No `vercel.json` rewrites
+are required. Set any optional env vars (e.g. `USE_LLM`) in the Vercel **project
+settings**, never in the repo. The service also runs unchanged on Render / Railway / Fly
+/ EC2 (`uvicorn app.main:app`), or via the local runbook above.
 
 > **Keep-warm note:** serverless cold starts can exceed the p95≤5s target on the first
 > hit. Ping `/health` ~every 30s during the judging window to keep an instance warm.
