@@ -18,11 +18,11 @@ import os
 
 from .schemas import CaseType
 
-USE_LLM = os.getenv("USE_LLM", "0") == "1"
+USE_LLM = os.getenv("USE_LLM", "false").strip().lower() in {"1", "true", "yes", "on"}
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
-LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "3.5"))
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", os.getenv("LLM_TIMEOUT_SECONDS", "3.5")))
 
 _VALID = {e.value for e in CaseType}
 

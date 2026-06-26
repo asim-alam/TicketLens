@@ -10,7 +10,8 @@ Read all 4 official docs; capture endpoints, schema, enums, safety rules, escala
 **VERIFY:** `CONTRACT.md` lists both endpoints, every response field+type, all 4 enums character-exact, all 3 safety penalties, the escalation condition, and the 30s/60s limits.
 
 ### Phase 1 — Scaffold + health
-Create `app/` package, `requirements.txt`, `.gitignore`, `.env.example`, `vercel.json`, `api/index.py`.
+Create `app/` package, `requirements.txt`, `.gitignore`, `.env.example`, root `index.py`,
+`Dockerfile`, `.dockerignore`, and `docker-compose.yml`.
 Implement `GET /health` → `{"status":"ok"}` and `POST /analyze-ticket` returning a *valid hardcoded* response.
 **VERIFY:** `uvicorn app.main:app` boots; `curl /health` → exactly `{"status":"ok"}`; POST returns 200 valid JSON.
 
@@ -38,16 +39,17 @@ Assert exact schema+enums, the safety rules, escalation, no-5xx-on-valid, 400/42
 
 ### Phase 6 — Optional LLM (OFF by default)
 `llm.py`: fallback-only refinement for LOW-confidence, non-safety cases. Temperature 0, JSON mode, 3–4s timeout,
-output discarded unless it validates against our enums; safety + escalation stay rule-driven. `USE_LLM=0` default.
-**VERIFY:** with `USE_LLM=0`, behaviour is identical to pure rules and `pytest` stays green. *(Skip if time is tight.)*
+output discarded unless it validates against our enums; safety + escalation stay rule-driven. `USE_LLM=false` default.
+**VERIFY:** with `USE_LLM=false`, behaviour is identical to pure rules and `pytest` stays green. *(Skip if time is tight.)*
 
 ### Phase 7 — Deploy to Vercel
-Confirm the current FastAPI-on-Vercel pattern. `vercel.json` rewrites `/(.*)` → `/api/index`; set env vars in the
-Vercel project (not repo). Deploy.
+Confirm the current FastAPI-on-Vercel pattern. The root `index.py` re-exports the FastAPI
+`app`, so `/health` and `/analyze-ticket` resolve at the base URL with no `/api` prefix.
+Set env vars in the Vercel project (not repo). Deploy.
 **VERIFY (from OUTSIDE):** `curl https://<url>/health` → `{"status":"ok"}`; POST a sample to `https://<url>/analyze-ticket` → valid JSON. Note cold-start; keep-warm by pinging `/health` ~every 30s during judging.
 
 ### Phase 8 — Docs + freeze
-`CLAUDE.md` + `AGENT.md` (identical core), `README.md` (setup, sample req/resp, MODELS section, AI usage, safety logic,
+`CLAUDE.md` + `AGENT.md` (identical core) + `AGENTS.md`, `README.md` (setup, sample req/resp, MODELS section, AI usage, safety logic,
 limitations), `sample_output.json`. Confirm `.gitignore` blocks `.env*`/`Api.txt`. Print the submission checklist.
 **VERIFY:** all docs present; no secrets committed (`git status` + grep); final `pytest` green against the frozen tree.
 
@@ -57,5 +59,6 @@ limitations), `sample_output.json`. Confirm `.gitignore` blocks `.env*`/`Api.txt
 - Tests live in `tests/test_matrix.py`. **Any change must keep `pytest` green and the schema exact.**
 - Safety + escalation are **rule-driven only** — never let the LLM write the final response object or relax safety.
 - Do not hardcode the public samples; they are a calibration set, hidden tests are broader.
-- No frontend, no Docker, no database. LLM stays OFF for judging unless deliberately enabled via env.
+- No frontend and no database. Docker is required as a judging fallback and must stay
+  rules-only by default. LLM stays OFF for judging unless deliberately enabled via env.
 - Freeze in the last 15 minutes — protect a working, deployed, green submission over any refactor.

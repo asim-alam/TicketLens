@@ -1,25 +1,12 @@
-# --- secrets: NEVER commit ---
-.env
-.env.local
-.env.*.local
-Api.txt
-*.key
-
-# --- python ---
-__pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-.venv/
-venv/
-.python-version
-
 # --- vercel / build ---
 .vercel
 .vercel/
 
+# --- node / generic build outputs ---
+node_modules/
+dist/
+build/
+
 # --- misc ---
 *.log
 .DS_Store
-
-.vercel

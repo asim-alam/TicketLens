@@ -15,3 +15,7 @@ CONTRACT.md
 CLAUDE.md
 AGENT.md
 sample_output.json
+Dockerfile
+docker-compose.yml
+.dockerignore
+judging.env

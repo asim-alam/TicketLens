@@ -200,6 +200,34 @@ def test_bangla_complaint_gets_bangla_reply():
     assert reply_is_safe(body["customer_reply"])
 
 
+def test_real_unicode_bangla_cash_in_issue():
+    body = post({
+        "ticket_id": "BN-REAL-1",
+        "complaint": "আমি এজেন্টের কাছে ২০০০ টাকা ক্যাশ ইন করেছি কিন্তু ব্যালেন্সে টাকা আসেনি।",
+        "language": "bn",
+        "transaction_history": [{"transaction_id": "TXN-BN-REAL", "type": "cash_in",
+                                 "amount": 2000, "counterparty": "AGENT-REAL",
+                                 "status": "pending"}],
+    }).json()
+    assert body["case_type"] == "agent_cash_in_issue"
+    assert body["relevant_transaction_id"] == "TXN-BN-REAL"
+    assert any("ঀ" <= ch <= "৿" for ch in body["customer_reply"])
+    assert reply_is_safe(body["customer_reply"])
+
+
+def test_real_unicode_bangla_phishing_escalates():
+    body = post({
+        "ticket_id": "BN-PH-1",
+        "complaint": "একজন ফোন করে আমার ওটিপি চাচ্ছে।",
+        "language": "bn",
+    }).json()
+    assert body["case_type"] == "phishing_or_social_engineering"
+    assert body["severity"] == "critical"
+    assert body["department"] == "fraud_risk"
+    assert body["human_review_required"] is True
+    assert reply_is_safe(body["customer_reply"])
+
+
 def test_romanized_banglish_wrong_transfer():
     body = post({
         "ticket_id": "RB-1",

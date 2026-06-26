@@ -1,0 +1,16 @@
+.git/
+.vercel/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+Api.txt
+*.key
+*.log
+node_modules/
+dist/
+build/

@@ -39,7 +39,8 @@ complaint · 500 internal (no stack traces). Valid requests must **never** 5xx.
 3. **Safety is non-negotiable** (tie-breaker #1; ≥2 critical violations = disqualified). `customer_reply` / `recommended_next_action` must never solicit PIN/OTP/password/card, never promise a refund/reversal/unblock, never redirect to a suspicious third party. `safety.py` is the final gate — keep it.
 4. **Rules-first; LLM optional & OFF.** The deterministic engine is a complete solution. The LLM (`llm.py`) is fallback-only, validated against enums, and may only *promote a low-confidence `other`*. It never writes the reply, severity, or escalation.
 5. **No hardcoding the public samples.** They are calibration; hidden tests are broader. Generalize.
-6. **No Docker. No database** (task is stateless — see CONTRACT §12). No real secrets in the repo.
+6. **Docker fallback only. No database** (task is stateless — see CONTRACT §12).
+   Docker must stay minimal, rules-only by default, and free of real secrets.
 
 ## Architecture map (file-by-file)
 
@@ -71,6 +72,22 @@ uvicorn app.main:app --port 8000      # serve
 pytest -q                              # 54 tests must pass
 ```
 
+## Docker fallback for judges
+
+Docker is accepted for submission reproducibility if the public endpoint is unavailable.
+Keep this committed path working:
+
+```bash
+docker build -t queuestorm-investigator .
+docker run --rm -p 8000:8000 --env-file judging.env queuestorm-investigator
+docker compose up --build
+```
+
+`judging.env` is committed with safe deterministic defaults (`USE_LLM=false`, blank API
+key). Do not rely on `.env.local` for judging; it is ignored and will not be present
+after a fresh pull. If Docker behavior changes, run the container and verify
+`GET /health`, `POST /analyze-ticket`, and `pytest -q`.
+
 ## Deploy (Vercel) + keep-warm
 
 Vercel's FastAPI backend framework auto-detects the top-level `app` in the root
@@ -82,7 +99,8 @@ Render/Railway/Fly/EC2 via `uvicorn app.main:app`.
 
 ## DO NOT
 
-- Build a frontend, add Docker, or add a database.
+- Build a frontend or add a database.
+- Add real secrets to Docker files, `judging.env`, `.env.example`, README, or tests.
 - Let an LLM write the final response object or relax safety.
 - Hardcode the public sample answers.
 - Commit `.env`, `.env.local`, `Api.txt`, or any key. Only `.env.example` (names) is committed.

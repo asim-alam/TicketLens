@@ -88,10 +88,10 @@ apply the single escalation rule → generate a safe, grounded reply.
 | Model | Where it runs | Why | Default |
 |-------|---------------|-----|---------|
 | **None (deterministic rules)** | In-process | The task is fully solvable with rules; gives zero-latency, zero-cost, zero-dependency, fully reproducible behaviour and cannot leak a credential request. | **Active** |
-| Optional OpenAI-compatible LLM (Groq `llama-3.3-70b-versatile`; Cerebras / Gemini by swapping `LLM_BASE_URL`+`LLM_MODEL`) | External API (your key) | *Fallback only*: may suggest a more specific `case_type` for a low-confidence `other` ticket. Output is validated against our enums and discarded otherwise. | **Off** (`USE_LLM=0`) |
+| Optional OpenAI-compatible LLM (Groq `llama-3.3-70b-versatile`; Cerebras / Gemini by swapping `LLM_BASE_URL`+`LLM_MODEL`) | External API (your key) | *Fallback only*: may suggest a more specific `case_type` for a low-confidence `other` ticket. Output is validated against our enums and discarded otherwise. | **Off** (`USE_LLM=false`) |
 
 The LLM **never** writes the `customer_reply`, sets severity/escalation, or relaxes
-safety — those are 100% rule-driven. With `USE_LLM=0` (the judging default) the service
+safety — those are 100% rule-driven. With `USE_LLM=false` (the judging default) the service
 makes no external calls.
 
 ## Safety logic
@@ -114,6 +114,7 @@ reports are forced to `critical` + `fraud_risk` + human review.
 python -m venv .venv
 # Windows:  .venv\Scripts\activate     |  macOS/Linux:  source .venv/bin/activate
 pip install -r requirements.txt
+pytest -q
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 Then:
@@ -125,6 +126,36 @@ curl -X POST http://localhost:8000/analyze-ticket \
   -H "content-type: application/json" \
   -d '{"ticket_id":"TKT-001","complaint":"I sent 5000 to a wrong number","transaction_history":[{"transaction_id":"TXN-9101","type":"transfer","amount":5000,"counterparty":"+8801719876543","status":"completed"}]}'
 ```
+
+## Docker fallback for judging
+
+Docker is the accepted fallback if the public endpoint is unavailable. The committed
+Docker path is fully reproducible and runs with `USE_LLM=false`, so it needs no API key or
+network call at request time.
+
+```bash
+docker build -t queuestorm-investigator .
+docker run --rm -p 8000:8000 --env-file judging.env queuestorm-investigator
+```
+
+Or with Compose:
+
+```bash
+docker compose up --build
+```
+
+Then verify:
+
+```bash
+curl http://localhost:8000/health
+
+curl -X POST http://localhost:8000/analyze-ticket \
+  -H "content-type: application/json" \
+  -d '{"ticket_id":"DOCKER-001","complaint":"payment failed but 1200 taka was deducted","transaction_history":[{"transaction_id":"TXN-D1","type":"payment","amount":1200,"counterparty":"MERCHANT-1","status":"failed"}]}'
+```
+
+`judging.env` is intentionally committed with safe defaults. Do not depend on
+`.env.local`; it is ignored and will not exist when a judge pulls the repo.
 
 ## Run the tests
 
@@ -141,6 +172,16 @@ and `/analyze-ticket` resolve at the root (not under `/api`). No `vercel.json` r
 are required. Set any optional env vars (e.g. `USE_LLM`) in the Vercel **project
 settings**, never in the repo. The service also runs unchanged on Render / Railway / Fly
 / EC2 (`uvicorn app.main:app`), or via the local runbook above.
+
+Test a public deployment from outside Vercel:
+
+```bash
+curl https://YOUR_PUBLIC_URL/health
+
+curl -X POST https://YOUR_PUBLIC_URL/analyze-ticket \
+  -H "content-type: application/json" \
+  -d '{"ticket_id":"PUBLIC-001","complaint":"I sent 5000 taka to a wrong number","transaction_history":[{"transaction_id":"TXN-P1","type":"transfer","amount":5000,"counterparty":"+8801719876543","status":"completed"}]}'
+```
 
 > **Keep-warm note:** serverless cold starts can exceed the p95≤5s target on the first
 > hit. Ping `/health` ~every 30s during the judging window to keep an instance warm.
