@@ -54,7 +54,7 @@ complaint · 500 internal (no stack traces). Valid requests must **never** 5xx.
 - `app/llm.py` — optional fallback (OFF by default).
 - `app/main.py` — FastAPI app, `/health`, `/analyze-ticket`, error handlers, safe fallback.
 - `index.py` — root Vercel entrypoint re-exporting the app (also `uvicorn index:app`).
-- `tests/test_matrix.py` — 54-case matrix (must stay green).
+- `tests/test_matrix.py` — 62-case matrix (must stay green).
 
 ## Escalation rule (human_review_required = true)
 
@@ -69,7 +69,7 @@ public samples, including SAMPLE-08 = false.)*
 python -m venv .venv && source .venv/Scripts/activate   # or .venv\Scripts\activate on Windows
 pip install -r requirements.txt
 uvicorn app.main:app --port 8000      # serve
-pytest -q                              # 54 tests must pass
+pytest -q                              # 62 tests must pass
 ```
 
 ## Docker fallback for judges
@@ -79,13 +79,14 @@ Keep this committed path working:
 
 ```bash
 docker build -t queuestorm-investigator .
-docker run --rm -p 8000:8000 --env-file judging.env queuestorm-investigator
+docker run --rm -p 8000:8000 --env-file .env.example queuestorm-investigator
 docker compose up --build
 ```
 
-`judging.env` is committed with safe deterministic defaults (`USE_LLM=false`, blank API
-key). Do not rely on `.env.local` for judging; it is ignored and will not be present
-after a fresh pull. If Docker behavior changes, run the container and verify
+The committed `.env.example` (names only — **no secrets**) is the Docker env file, so the
+fallback runs with no API key. `.env.local` is gitignored (copy `.env.example` to it only
+to test the optional LLM). Keep `USE_LLM=false` for judging. If
+Docker behavior changes, run the container and verify
 `GET /health`, `POST /analyze-ticket`, and `pytest -q`.
 
 ## Deploy (Vercel) + keep-warm
@@ -100,10 +101,10 @@ Render/Railway/Fly/EC2 via `uvicorn app.main:app`.
 ## DO NOT
 
 - Build a frontend or add a database.
-- Add real secrets to Docker files, `judging.env`, `.env.example`, README, or tests.
+- Add real secrets to Docker files, `.env.local`, `.env.example`, README, or tests. No real API key is ever committed.
 - Let an LLM write the final response object or relax safety.
 - Hardcode the public sample answers.
-- Commit `.env`, `.env.local`, `Api.txt`, or any key. Only `.env.example` (names) is committed.
+- Commit `.env`, `.env.local`, `Api.txt`, or any real key — all are gitignored. Only `.env.example` (names, no secrets) is committed.
 - Refactor in the final minutes — freeze and protect a working, deployed, green submission.
 
 ## For the second agent

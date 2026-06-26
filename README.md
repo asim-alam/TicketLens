@@ -74,7 +74,7 @@ app/
   llm.py         OPTIONAL, OFF-by-default LLM fallback (case_type hint only; safety stays rule-driven).
   main.py        FastAPI app, error handlers, safe 200 fallback.
 index.py         Root Vercel entrypoint (re-exports the FastAPI app; also `uvicorn index:app`).
-tests/           54-case matrix: 10 samples + adversarial + malformed + multilingual + edge.
+tests/           62-case matrix: 10 samples + adversarial + malformed + multilingual + edge.
 ```
 
 **Reasoning pipeline:** classify the case (priority-ordered, trilingual) → match the
@@ -135,7 +135,7 @@ network call at request time.
 
 ```bash
 docker build -t queuestorm-investigator .
-docker run --rm -p 8000:8000 --env-file judging.env queuestorm-investigator
+docker run --rm -p 8000:8000 --env-file .env.example queuestorm-investigator
 ```
 
 Or with Compose:
@@ -154,14 +154,17 @@ curl -X POST http://localhost:8000/analyze-ticket \
   -d '{"ticket_id":"DOCKER-001","complaint":"payment failed but 1200 taka was deducted","transaction_history":[{"transaction_id":"TXN-D1","type":"payment","amount":1200,"counterparty":"MERCHANT-1","status":"failed"}]}'
 ```
 
-`judging.env` is intentionally committed with safe defaults. Do not depend on
-`.env.local`; it is ignored and will not exist when a judge pulls the repo.
+The committed `.env.example` (variable **names only — no secrets**) is used as the Docker
+env file, so the fallback runs exactly after a judge pulls the repository with **no API key
+required**. `.env.local` is gitignored; copy `.env.example` to `.env.local` and add your own
+key only if you intentionally test the optional LLM path. Keep `USE_LLM=false` for
+deterministic judging.
 
 ## Run the tests
 
 ```bash
 pip install -r requirements.txt
-pytest -q       # 54 cases: samples, safety/adversarial, malformed, multilingual, edge
+pytest -q       # 62 cases: samples, safety/adversarial, malformed, multilingual, edge
 ```
 
 ## Deploy (Vercel)

@@ -49,7 +49,7 @@ pytest -q
 
 ```bash
 docker build -t queuestorm .
-docker run --rm -p 8000:8000 queuestorm
+docker run --rm -p 8000:8000 --env-file .env.example queuestorm
 curl http://localhost:8000/health
 ```
 
@@ -90,9 +90,9 @@ curl https://YOUR_PUBLIC_URL/health
 
 ## Environment Variable Rules
 
-- The app must run with no `.env` file.
-- `.env.local` is local only and must stay ignored.
-- Commit only `.env.example` placeholders and safe `judging.env` defaults.
+- The app must run even if env values are missing.
+- The committed `.env.example` (names only — no secrets) is the Docker env file, so judging needs no API key.
+- `.env.local` is gitignored and never committed; copy `.env.example` to it only to test the optional LLM.
 - `USE_LLM=false` or missing means deterministic rules-only mode.
 - Real LLM keys belong only in local/Vercel environment settings.
 
@@ -121,7 +121,7 @@ Or:
 
 ```bash
 docker build -t queuestorm .
-docker run --rm -p 8000:8000 queuestorm
+docker run --rm -p 8000:8000 --env-file .env.example queuestorm
 curl http://localhost:8000/health
 ```
 
@@ -137,7 +137,7 @@ The app must not require real API keys, a database, GPU, local model downloads, 
 
 - No frontend, database, payment integration, auth dashboard, GPU dependency, or large model download.
 - Do not hardcode official sample answers.
-- Do not commit `.env`, `.env.local`, `Api.txt`, logs, caches, or secrets.
+- Do not commit `.env`, `Api.txt`, logs, caches, or unrelated secrets.
 - Do not loosen response models or remove safety sanitizers.
 - Do not make the LLM required.
 

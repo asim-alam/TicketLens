@@ -3,7 +3,7 @@ services:
     build: .
     image: queuestorm-investigator:latest
     env_file:
-      - judging.env
+      - .env.example
     ports:
       - "8000:8000"
     healthcheck:

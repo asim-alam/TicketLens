@@ -135,7 +135,10 @@ Allowed & encouraged: protective advice such as "Please do not share your PIN or
 ## 9. Allowed external services / secrets
 
 - May call major public LLM providers (OpenAI/Anthropic/Google/Cohere/HF/Groq/Cerebras…) with our own keys. Outbound calls to our own servers/scrapers may be blocked.
-- **No secrets in the repo.** Env vars only. `.env`, `.env.local`, `Api.txt` are gitignored. Only `.env.example` (names, no values) is committed. Responses/logs/errors never leak secrets or stack traces.
+- Env vars configure optional external providers. Only `.env.example` (variable names, **no
+  secrets**) is committed; `.env.local` and any real key are gitignored and never committed.
+  The deterministic Docker fallback runs from `.env.example` with no API key. Responses/logs/
+  errors must still never leak secrets or stack traces.
 
 ## 10. Scoring weights (where the points live)
 
