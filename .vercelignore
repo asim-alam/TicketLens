@@ -1,0 +1,17 @@
+tests/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+Api.txt
+.git/
+*.log
+BUILD_PLAN.md
+CONTRACT.md
+CLAUDE.md
+AGENT.md
+sample_output.json
