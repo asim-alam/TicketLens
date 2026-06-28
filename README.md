@@ -11,7 +11,7 @@ should handle it, and a **safe** customer reply.
 > another. The service decides what is true, and says "insufficient data" rather than
 > guessing.
 
-## Endpoints
+## Endpoints table
 
 | Method | Path | Description |
 |--------|------|-------------|
